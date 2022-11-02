@@ -22,33 +22,29 @@ def _rs(df):
     """generate random sample"""
     return df.sample(len(df), replace=True)
 
-def Storey(pvalues, m, pi0=None):
+def Storey(pvalues, m, interpolate_pi0=True):
     """
     Estimates q-values from p-values using Storey's FDR approach
     Args
     =====
-    pi0: if None, it's estimated as suggested in Storey and Tibshirani, 2003.
-         For most GWAS this is unnecessary, since pi0 is ~1
+    interpolate_pi0 (default: True): Estimated P_i0 as suggested in Storey and 
+    Tibshirani, 2003. For most GWAS this is unnecessary, since pi0 is ~1
     """
     from scipy import interpolate
     assert type(pvalues) == pd.Series, "pvalues must be indexed Series"
     assert(pvalues.min() >= 0 and pvalues.max() <= 1), "p-values should be between 0 and 1"
 
-    # if the number of hypotheses is small, just set pi0 to 1
-    if pi0 is None:
-        if m < 100:
-            pi0 = 1.0
-        else:
+    if interpolate_pi0 and m > 100:
             # evaluate pi0 for different lambdas
-            lam = np.arange(0, 0.9, 0.01)
-            pi0 = np.array([(pvalues > lam_i).sum()/(m*(1-lam_i)) for lam_i in lam]) 
-                # fit natural cubic spline
-            tck = interpolate.splrep(lam, pi0, k=3)
-            pi0 = min(1., interpolate.splev(lam[-1], tck))
+        lam = np.arange(0, 0.9, 0.01)
+        pi0 = np.array([(pvalues > lam_i).sum()/(m*(1-lam_i)) for lam_i in lam]) 
+            # fit natural cubic spline
+        tck = interpolate.splrep(lam, pi0, k=3)
+        pi0 = np.clip(interpolate.splev(lam[-1], tck), 0, 1)
+    else:
+        pi0 = 1.0
 
-    assert(pi0 >= 0 and pi0 <= 1), "pi0 is not between 0 and 1: %f" % pi0
-    p_ordered = pvalues.argsort()
-    pvalues = pvalues[p_ordered]
+    pvalues = pvalues.sort_values()
     qv = pi0 * pvalues
     qv[-1] = min(qv[-1], 1.0)
 
@@ -65,19 +61,16 @@ correction approach. Can be either 'Bonferroni' (default), 'Sidak', 'Hochberg',
 """
     if method is None:
         return P
-    m = len(P)
-    match method:
-        case 'Bonferroni':
-            inflated = P*m
-        case 'Sidak':
-            inflated = 1 - np.exp(np.log(1 - P)*m)
-        case 'Hochberg':
-            inflated = P*(m - P.argsort())
-        case 'Storey':
-            return Storey(P, m)
-        case _:
-            raise ValueError("Unknown FWER method")
-    return inflated.clip(upper=1.)
+    
+    methods = dict(
+        Bonferroni  = lambda P, m: P*m,
+        Sidak       = lambda P, m: 1 - np.exp(np.log(1 - P)*m),
+        Hochberg    = lambda P, m: P*(m - P.sort_values()),
+        Storey      = Storey)
+    try: 
+        return methods[method](P, len(P)).clip(upper=1.)
+    except KeyError:
+        raise ValueError(f"Unknown FWER method: {method}")
 
 @np.vectorize
 def pstars(p_value, pstar_values=np.array([1e-4, 1e-3, 1e-2, 0.05])):
@@ -91,7 +84,6 @@ pstar_values (default:APA/NEJM thresholds, i.e. [0.05, 0.01, 0.001, 0.0001]) : l
     p-value thresholds defining each increasing `*`. 
 """
     return (len(pstar_values) - np.searchsorted(pstar_values, p_value))*'*'
-
 
 class sample(object):
     permissible_uncertainty = 0.21
@@ -288,4 +280,4 @@ if __name__ == '__main__':
     cols = TEST['columns']
     x = pd.DataFrame(np.random.randn(TEST['N'], len(cols)) + np.arange(len(cols)), columns=cols)
     print(describe(x, TEST['metric']))
-    print(sample(x, TEST['metric']).pTable(method=FDR_method).to_string())
+    print(sample(x, TEST['metric']).pTable(method=TEST['FDR_method']).to_string())
