@@ -1,0 +1,4 @@
+build/*
+*.c
+bootstrap_resample.egg-info/*
+dist/*

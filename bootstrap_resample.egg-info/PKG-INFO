@@ -1,0 +1,18 @@
+Metadata-Version: 1.2
+Name: bootstrap-resample
+Version: 0.1
+Summary: Bootstrap resampling class for Pandas.DataFrames
+Home-page: https://github.com/cancerevo/bootstrap_resample
+Author: Christopher McFarland
+Author-email: christopher.mcfarland@case.edu
+License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Cython
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Intended Audience :: Science/Research
+Classifier: Natural Language :: English
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Requires-Python: ~=3.2
