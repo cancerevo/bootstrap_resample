@@ -5,14 +5,6 @@ from warnings import warn
 from bootstrap_resample.pmap import pmap
 from itertools import combinations_with_replacement
 
-TEST = dict(
-    seed = 42,
-    N = int(1e4),
-    columns = ['Cats', 'Dogs'],
-    metric = np.mean,
-    FDR_method = 'Storey'
-)
-
 def possible_boots(n):
     """Calculate size of full bootstrap distribution"""
     from scipy.special import comb
@@ -238,7 +230,7 @@ two_sided [def: True] : If False, reports the probability that estimator exceeds
         pscores = self.percentileofscore(null_hypothesis)*1e-2
         return pd.DataFrame([pscores, 1 - pscores]).min()*2 if two_sided else pscores
 
-    def pTable(self, FWER_method='Hochberg', **kwargs):
+    def pTable(self, method='Hochberg', **kwargs):
         """Create a table of P-values using pscores method.
 
 FWER_method [def: 'Hochberg']: Method for calculating Family-Wise Error Rate.
@@ -248,7 +240,7 @@ FWER_method [def: 'Hochberg']: Method for calculating Family-Wise Error Rate.
 """
         return self.CI().assign(**{
             'P-value':self.pscores(**kwargs),
-            'FWER': lambda df: FWER(df['P-value'], method=FWER_method),
+            'FWER': lambda df: FWER(df['P-value'], method=method),
             'pstars' : lambda df: pstars(df['FWER'])})
 
 def describe(df, estimator, **kargs):
@@ -274,10 +266,3 @@ def rsquared(df, levels=0, agg_level=None):
     Y = condensed.pop(condensed.columns[-1])
     result = OLS(Y, condensed).fit()
     return result.rsquared
-
-if __name__ == '__main__':
-    np.random.seed(seed=TEST['seed'])
-    cols = TEST['columns']
-    x = pd.DataFrame(np.random.randn(TEST['N'], len(cols)) + np.arange(len(cols)), columns=cols)
-    print(describe(x, TEST['metric']))
-    print(sample(x, TEST['metric']).pTable(method=TEST['FDR_method']).to_string())
