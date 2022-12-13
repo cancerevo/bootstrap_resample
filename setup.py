@@ -5,10 +5,6 @@ import os
 
 NAME = "bootstrap_resample"
 VERSION = 0.1
-ext = '.c'
-
-extensions = [Extension(NAME, [NAME+ext], extra_compile_args=['-O2'] )]
-
 
 setup(
     name=NAME,
